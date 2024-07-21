@@ -1,4 +1,4 @@
-use crate::{coff::CoffFileHeader, optional::{OptionalHeader32, OptionalHeader64, Magic, Optional}, section::{SectionHeader, parse_section_table}, Error};
+use crate::{coff::CoffFileHeader, optional::{Magic, Optional, OptionalHeader32, OptionalHeader64}, resources::parse_resource_section, section::{parse_section_table, SectionHeader}, Error};
 use bytemuck::checked::try_from_bytes;
 use num_traits::FromPrimitive;
 use core::fmt;
@@ -84,6 +84,15 @@ pub fn parse_portable_executable(binary: &[u8]) -> Result<PortableExecutable, Er
     }
 
     pe.section_table = parse_section_table(binary, offset, pe.coff.number_of_sections);
+    
+    for section in pe.section_table.iter() {
+        let name = section.get_name().unwrap();
+
+        if name == ".rsrc" {
+            parse_resource_section(binary, section.virtual_address as usize);
+            break;
+        }
+    }
 
     /*for section in pe.section_table.iter() {
         let name = match section.get_name() {
